@@ -1,3 +1,14 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,mappings
+  endpoint:
+    health:
+      show-details: always
+logging:
+  level:
+    org.springframework.boot.autoconfigure.h2: DEBUG
 spring:
   application:
     name: configtracker
@@ -11,7 +22,18 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
 
   h2:
     console:
       enabled: true
+      path: /h2-console
+      settings:
+        trace: false
+        web-allow-others: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
