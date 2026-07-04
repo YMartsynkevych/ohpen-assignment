@@ -5,6 +5,8 @@ import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Service
 @Slf4j
@@ -16,6 +18,7 @@ public class MonitoringService {
         this.meterRegistry = meterRegistry;
     }
     
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void notifyIfCritical(ConfigChange change) {
         ChangeOperation op = getOperation(change);
         meterRegistry.counter("config_tracker_changes_total", 

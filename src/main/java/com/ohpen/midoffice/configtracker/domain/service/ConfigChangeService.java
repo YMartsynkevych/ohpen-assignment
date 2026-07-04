@@ -2,12 +2,17 @@ package com.ohpen.midoffice.configtracker.domain.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ohpen.midoffice.configtracker.api.dto.ChangeRequest;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
-import com.ohpen.midoffice.configtracker.infrastructure.persistence.*;
+import com.ohpen.midoffice.configtracker.infrastructure.persistence.ConfigChangeEntity;
+import com.ohpen.midoffice.configtracker.infrastructure.persistence.ConfigChangeRepository;
+import com.ohpen.midoffice.configtracker.infrastructure.persistence.RuleStateEntity;
+import com.ohpen.midoffice.configtracker.infrastructure.persistence.RuleStateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +29,10 @@ public class ConfigChangeService {
     private final ConfigChangeRepository changeRepository;
     private final RuleStateRepository ruleStateRepository;
     private final ObjectMapper objectMapper;
-    private final com.ohpen.midoffice.configtracker.infrastructure.monitoring.MonitoringService monitoringService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public ConfigChange processChangeRequest(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+    public ConfigChange processChangeRequest(ChangeRequest request) {
         log.info("Processing change request: {}", request);
         
         ConfigChange change = switch (request.operation()) {
@@ -54,14 +59,14 @@ public class ConfigChangeService {
         return trackChange(change);
     }
 
-    private void validateAdd(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+    private void validateAdd(ChangeRequest request) {
         String key = extractKey(request.payload());
         if (ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key).isPresent()) {
             throw new IllegalStateException("Cannot add rule: Rule already exists for key " + key);
         }
     }
 
-    private void validateUpdate(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+    private void validateUpdate(ChangeRequest request) {
         String key = extractKey(request.newPayload());
         Optional<RuleStateEntity> existing = ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key);
         if (existing.isEmpty()) {
@@ -80,7 +85,7 @@ public class ConfigChangeService {
         }
     }
 
-    private void validateDelete(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+    private void validateDelete(ChangeRequest request) {
         String key = extractKey(request.payload());
         if (ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key).isEmpty()) {
             throw new IllegalStateException("Cannot delete rule: Rule does not exist for key " + key);
@@ -99,8 +104,8 @@ public class ConfigChangeService {
         // 2. Update current state
         updateCurrentState(change);
 
-        // 3. Notify
-        monitoringService.notifyIfCritical(change);
+        // 3. Notify (only after successful commit)
+        eventPublisher.publishEvent(change);
 
         return change;
     }

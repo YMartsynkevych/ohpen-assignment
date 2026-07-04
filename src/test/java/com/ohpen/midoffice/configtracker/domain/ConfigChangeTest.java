@@ -1,6 +1,5 @@
 package com.ohpen.midoffice.configtracker.domain;
 
-import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
@@ -10,7 +9,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ConfigChangeTest {
 
