@@ -7,7 +7,6 @@ A senior-architect designed service for tracking configuration changes across mu
 - **Domain-Driven Design**: Focused on making illegal states unrepresentable.
 - **API-First**: Standard RESTful endpoints for CRUD-like change operations.
 - **In-Memory Persistence**: Uses H2 and JPA for history and current state tracking.
-- **Kafka Integration**: Publishes change events to the `config-changes` topic.
 - **Monitoring**: Notifies an external service for critical changes (e.g., deletions).
 - **Observability**: Health and metrics endpoints via Spring Boot Actuator.
 

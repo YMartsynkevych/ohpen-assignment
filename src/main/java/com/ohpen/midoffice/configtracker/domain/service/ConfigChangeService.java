@@ -3,13 +3,11 @@ package com.ohpen.midoffice.configtracker.domain.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
-import com.ohpen.midoffice.configtracker.domain.model.ConfigChangeEvent;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
 import com.ohpen.midoffice.configtracker.infrastructure.persistence.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +24,6 @@ public class ConfigChangeService {
     private final ConfigChangeRepository changeRepository;
     private final RuleStateRepository ruleStateRepository;
     private final ObjectMapper objectMapper;
-    private final ApplicationEventPublisher eventPublisher;
     private final com.ohpen.midoffice.configtracker.infrastructure.monitoring.MonitoringService monitoringService;
 
     @Transactional
@@ -102,8 +99,7 @@ public class ConfigChangeService {
         // 2. Update current state
         updateCurrentState(change);
 
-        // 3. Notify and Publish
-        eventPublisher.publishEvent(new ConfigChangeEvent(this, change));
+        // 3. Notify
         monitoringService.notifyIfCritical(change);
 
         return change;
