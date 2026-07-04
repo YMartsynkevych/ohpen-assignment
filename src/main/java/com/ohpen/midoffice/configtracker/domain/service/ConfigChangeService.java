@@ -21,13 +21,74 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ChangeTrackerService {
+public class ConfigChangeService {
 
     private final ConfigChangeRepository changeRepository;
     private final RuleStateRepository ruleStateRepository;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final com.ohpen.midoffice.configtracker.infrastructure.monitoring.MonitoringService monitoringService;
+
+    @Transactional
+    public ConfigChange processChangeRequest(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+        log.info("Processing change request: {}", request);
+        
+        ConfigChange change = switch (request.operation()) {
+            case ADD -> {
+                validateAdd(request);
+                yield new ConfigChange.AddedRule(
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
+                );
+            }
+            case UPDATE -> {
+                validateUpdate(request);
+                yield new ConfigChange.UpdatedRule(
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.oldPayload(), request.newPayload()
+                );
+            }
+            case DELETE -> {
+                validateDelete(request);
+                yield new ConfigChange.RemovedRule(
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
+                );
+            }
+        };
+
+        return trackChange(change);
+    }
+
+    private void validateAdd(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+        String key = extractKey(request.payload());
+        if (ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key).isPresent()) {
+            throw new IllegalStateException("Cannot add rule: Rule already exists for key " + key);
+        }
+    }
+
+    private void validateUpdate(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+        String key = extractKey(request.newPayload());
+        Optional<RuleStateEntity> existing = ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key);
+        if (existing.isEmpty()) {
+            throw new IllegalStateException("Cannot update rule: Rule does not exist for key " + key);
+        }
+        // Additional validation: ensure oldPayload matches existing state
+        try {
+            String existingPayloadJson = existing.get().getPayloadJson();
+            String oldPayloadJson = objectMapper.writeValueAsString(request.oldPayload());
+            if (!existingPayloadJson.equals(oldPayloadJson)) {
+                 log.warn("Update payload mismatch for key {}. Existing: {}, Provided: {}", key, existingPayloadJson, oldPayloadJson);
+                 // In some strict systems we would throw here. 
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void validateDelete(com.ohpen.midoffice.configtracker.api.dto.ChangeRequest request) {
+        String key = extractKey(request.payload());
+        if (ruleStateRepository.findByRuleTypeAndRuleKey(request.type(), key).isEmpty()) {
+            throw new IllegalStateException("Cannot delete rule: Rule does not exist for key " + key);
+        }
+    }
 
     @Transactional
     public ConfigChange trackChange(ConfigChange change) {

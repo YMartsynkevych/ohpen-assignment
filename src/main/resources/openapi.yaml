@@ -24,6 +24,8 @@ paths:
                 $ref: '#/components/schemas/ChangeResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
     get:
       summary: Retrieve change history with filters
@@ -190,3 +192,10 @@ components:
               error: { type: string }
               message: { type: string }
               path: { type: string }
+    Conflict:
+      description: Configuration conflict (e.g., rule already exists)
+      content:
+        application/json:
+          schema:
+            type: string
+            example: "Cannot add rule: Rule already exists for key CUST-1"

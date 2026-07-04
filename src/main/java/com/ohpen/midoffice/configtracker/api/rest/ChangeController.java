@@ -5,7 +5,7 @@ import com.ohpen.midoffice.configtracker.api.dto.ChangeResponse;
 import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
-import com.ohpen.midoffice.configtracker.domain.service.ChangeTrackerService;
+import com.ohpen.midoffice.configtracker.domain.service.ConfigChangeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,23 +21,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ChangeController {
 
-    private final ChangeTrackerService changeService;
+    private final ConfigChangeService changeService;
 
     @PostMapping
     public ResponseEntity<ChangeResponse> createChange(@Valid @RequestBody ChangeRequest request) {
-        ConfigChange change = switch (request.operation()) {
-            case ADD -> new ConfigChange.AddedRule(
-                UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
-            );
-            case UPDATE -> new ConfigChange.UpdatedRule(
-                UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.oldPayload(), request.newPayload()
-            );
-            case DELETE -> new ConfigChange.RemovedRule(
-                UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
-            );
-        };
-        
-        ConfigChange saved = changeService.trackChange(change);
+        ConfigChange saved = changeService.processChangeRequest(request);
         return ResponseEntity.ok(mapToResponse(saved));
     }
 

@@ -50,4 +50,47 @@ class ChangeControllerIT {
                 .andExpect(jsonPath("$.type").value("CREDIT_LIMIT"))
                 .andExpect(jsonPath("$.payload.amount").value(5000.00));
     }
+
+    @Test
+    void shouldFailWhenAddingExistingRule() throws Exception {
+        Rule payload = new Rule.CreditLimitRule(new BigDecimal("1000.00"), "USD", "CUST-1");
+        ChangeRequest request = new ChangeRequest(
+            RuleType.CREDIT_LIMIT,
+            ChangeOperation.ADD,
+            "tester",
+            payload,
+            null,
+            null
+        );
+
+        // First ADD should succeed
+        mockMvc.perform(post("/api/v1/changes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        // Second ADD should fail
+        mockMvc.perform(post("/api/v1/changes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldFailWhenDeletingNonExistentRule() throws Exception {
+        Rule payload = new Rule.CreditLimitRule(new BigDecimal("1000.00"), "USD", "NON-EXISTENT");
+        ChangeRequest request = new ChangeRequest(
+            RuleType.CREDIT_LIMIT,
+            ChangeOperation.DELETE,
+            "tester",
+            payload,
+            null,
+            null
+        );
+
+        mockMvc.perform(post("/api/v1/changes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
 }
