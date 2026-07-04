@@ -12,11 +12,20 @@ A senior-architect designed service for tracking configuration changes across mu
 - **Observability**: Health and metrics endpoints via Spring Boot Actuator.
 
 ## Domain Model
-The core domain uses a sealed interface `RulePayload` with specific implementations for:
-- `CreditLimitPayload`
-- `ApprovalPolicyPayload`
+The core domain uses Java 21 `sealed interfaces` and `records` to ensure illegal states are unrepresentable.
 
-This ensures that only valid payloads can be associated with specific rule types.
+### Rule Hierarchy
+- `Rule` (sealed interface)
+  - `CreditLimitRule` (record)
+  - `ApprovalPolicyRule` (record)
+
+### Configuration Change Hierarchy
+- `ConfigChange` (sealed interface)
+  - `AddedRule` (record): Contains the new rule.
+  - `UpdatedRule` (record): Contains both **old** and **new** rule versions.
+  - `RemovedRule` (record): Contains the removed rule.
+
+This structure guarantees that an update always has a before-and-after state, while a deletion only tracks what was removed.
 
 ## API Endpoints
 The service provides a RESTful API for managing configuration changes.

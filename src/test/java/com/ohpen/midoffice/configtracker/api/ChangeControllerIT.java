@@ -3,12 +3,12 @@ package com.ohpen.midoffice.configtracker.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohpen.midoffice.configtracker.api.dto.ChangeRequest;
 import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
-import com.ohpen.midoffice.configtracker.domain.model.RulePayload;
+import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,12 +32,14 @@ class ChangeControllerIT {
 
     @Test
     void shouldCreateAndRetrieveChange() throws Exception {
-        RulePayload payload = new RulePayload.CreditLimitPayload(new BigDecimal("5000.00"), "USD", "CUST-999");
+        Rule payload = new Rule.CreditLimitRule(new BigDecimal("5000.00"), "USD", "CUST-999");
         ChangeRequest request = new ChangeRequest(
             RuleType.CREDIT_LIMIT,
             ChangeOperation.ADD,
             "tester",
-            payload
+            payload,
+            null,
+            null
         );
 
         mockMvc.perform(post("/api/v1/changes")

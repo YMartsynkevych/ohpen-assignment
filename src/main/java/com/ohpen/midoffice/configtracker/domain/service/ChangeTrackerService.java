@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChangeEvent;
-import com.ohpen.midoffice.configtracker.domain.model.RulePayload;
+import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
 import com.ohpen.midoffice.configtracker.infrastructure.persistence.*;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +35,7 @@ public class ChangeTrackerService {
         
         // 1. Save to history
         ConfigChangeEntity entity = new ConfigChangeEntity();
-        entity.setId(change.id());
-        entity.setRuleType(change.ruleType());
-        entity.setOperation(change.operation());
-        entity.setPayload(change.payload(), objectMapper);
-        entity.setTimestamp(change.timestamp());
-        entity.setActor(change.actor());
+        entity.setFromDomain(change, objectMapper);
         changeRepository.save(entity);
 
         // 2. Update current state
@@ -54,30 +49,35 @@ public class ChangeTrackerService {
     }
 
     private void updateCurrentState(ConfigChange change) {
-        String key = extractKey(change.payload());
+        Rule payload = switch (change) {
+            case ConfigChange.AddedRule added -> added.newRule();
+            case ConfigChange.UpdatedRule updated -> updated.newRule();
+            case ConfigChange.RemovedRule removed -> removed.removedRule();
+        };
+
+        String key = extractKey(payload);
         Optional<RuleStateEntity> existingState = ruleStateRepository.findByRuleTypeAndRuleKey(change.ruleType(), key);
 
-        switch (change.operation()) {
-            case ADD, UPDATE -> {
-                RuleStateEntity state = existingState.orElse(new RuleStateEntity());
-                state.setRuleType(change.ruleType());
-                state.setRuleKey(key);
-                try {
-                    state.setPayloadJson(objectMapper.writeValueAsString(change.payload()));
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-                state.setLastModified(LocalDateTime.now());
-                ruleStateRepository.save(state);
+        if (change instanceof ConfigChange.RemovedRule) {
+            existingState.ifPresent(ruleStateRepository::delete);
+        } else {
+            RuleStateEntity state = existingState.orElse(new RuleStateEntity());
+            state.setRuleType(change.ruleType());
+            state.setRuleKey(key);
+            try {
+                state.setPayloadJson(objectMapper.writeValueAsString(payload));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
-            case DELETE -> existingState.ifPresent(ruleStateRepository::delete);
+            state.setLastModified(LocalDateTime.now());
+            ruleStateRepository.save(state);
         }
     }
 
-    private String extractKey(RulePayload payload) {
+    private String extractKey(Rule payload) {
         return switch (payload) {
-            case RulePayload.CreditLimitPayload cl -> cl.customerId();
-            case RulePayload.ApprovalPolicyPayload ap -> ap.policyName();
+            case Rule.CreditLimitRule cl -> cl.customerId();
+            case Rule.ApprovalPolicyRule ap -> ap.policyName();
         };
     }
 
@@ -94,14 +94,6 @@ public class ChangeTrackerService {
     }
 
     private ConfigChange toDomain(ConfigChangeEntity entity) {
-        return new ConfigChange(
-            entity.getId(),
-            entity.getRuleType(),
-            entity.getOperation(),
-            entity.getPayload(objectMapper),
-            entity.getTimestamp(),
-            entity.getActor(),
-            null // metadata not implemented in entity yet
-        );
+        return entity.toDomain(objectMapper);
     }
 }

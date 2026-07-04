@@ -10,20 +10,20 @@ import java.util.List;
     include = JsonTypeInfo.As.PROPERTY,
     property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = RulePayload.CreditLimitPayload.class, name = "CREDIT_LIMIT"),
-    @JsonSubTypes.Type(value = RulePayload.ApprovalPolicyPayload.class, name = "APPROVAL_POLICY")
+    @JsonSubTypes.Type(value = Rule.CreditLimitRule.class, name = "CREDIT_LIMIT"),
+    @JsonSubTypes.Type(value = Rule.ApprovalPolicyRule.class, name = "APPROVAL_POLICY")
 })
-public sealed interface RulePayload {
+public sealed interface Rule {
     
-    record CreditLimitPayload(
+    record CreditLimitRule(
         BigDecimal amount,
         String currency,
         String customerId
-    ) implements RulePayload {}
+    ) implements Rule {}
 
-    record ApprovalPolicyPayload(
+    record ApprovalPolicyRule(
         String policyName,
         List<String> approvers,
         int requiredSignatures
-    ) implements RulePayload {}
+    ) implements Rule {}
 }

@@ -1,7 +1,7 @@
 package com.ohpen.midoffice.configtracker.api.dto;
 
 import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
-import com.ohpen.midoffice.configtracker.domain.model.RulePayload;
+import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
 
 import java.time.LocalDateTime;
@@ -13,5 +13,7 @@ public record ChangeResponse(
     ChangeOperation operation,
     String actor,
     LocalDateTime timestamp,
-    RulePayload payload
+    Rule payload,        // for ADD or DELETE
+    Rule oldPayload,     // for UPDATE
+    Rule newPayload      // for UPDATE
 ) {}

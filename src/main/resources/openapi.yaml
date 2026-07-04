@@ -89,7 +89,7 @@ components:
 
     ChangeRequest:
       type: object
-      required: [type, operation, actor, payload]
+      required: [type, operation, actor]
       properties:
         type:
           $ref: '#/components/schemas/RuleType'
@@ -99,7 +99,14 @@ components:
           type: string
           example: "admin-user-01"
         payload:
-          $ref: '#/components/schemas/RulePayload'
+          $ref: '#/components/schemas/Rule'
+          description: Payload for ADD or DELETE operations
+        oldPayload:
+          $ref: '#/components/schemas/Rule'
+          description: Old payload for UPDATE operation
+        newPayload:
+          $ref: '#/components/schemas/Rule'
+          description: New payload for UPDATE operation
 
     ChangeResponse:
       type: object
@@ -117,21 +124,28 @@ components:
           type: string
           format: date-time
         payload:
-          $ref: '#/components/schemas/RulePayload'
+          $ref: '#/components/schemas/Rule'
+          description: Payload for ADD or DELETE operations
+        oldPayload:
+          $ref: '#/components/schemas/Rule'
+          description: Old payload for UPDATE operation
+        newPayload:
+          $ref: '#/components/schemas/Rule'
+          description: New payload for UPDATE operation
 
-    RulePayload:
+    Rule:
       type: object
-      description: Polymorphic payload based on the rule type
+      description: Polymorphic rule based on the rule type
       discriminator:
         propertyName: type
         mapping:
-          CREDIT_LIMIT: '#/components/schemas/CreditLimitPayload'
-          APPROVAL_POLICY: '#/components/schemas/ApprovalPolicyPayload'
+          CREDIT_LIMIT: '#/components/schemas/CreditLimitRule'
+          APPROVAL_POLICY: '#/components/schemas/ApprovalPolicyRule'
       oneOf:
-        - $ref: '#/components/schemas/CreditLimitPayload'
-        - $ref: '#/components/schemas/ApprovalPolicyPayload'
+        - $ref: '#/components/schemas/CreditLimitRule'
+        - $ref: '#/components/schemas/ApprovalPolicyRule'
 
-    CreditLimitPayload:
+    CreditLimitRule:
       type: object
       required: [type, amount, currency, customerId]
       properties:
@@ -147,7 +161,7 @@ components:
         customerId:
           type: string
 
-    ApprovalPolicyPayload:
+    ApprovalPolicyRule:
       type: object
       required: [type, policyName, approvers, requiredSignatures]
       properties:
