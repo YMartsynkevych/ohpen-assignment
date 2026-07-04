@@ -19,10 +19,14 @@ The core domain uses a sealed interface `RulePayload` with specific implementati
 This ensures that only valid payloads can be associated with specific rule types.
 
 ## API Endpoints
+The service provides a RESTful API for managing configuration changes.
+
 - `POST /api/v1/changes`: Create a new configuration change.
 - `GET /api/v1/changes/{id}`: Retrieve a specific change by its UUID.
 - `GET /api/v1/changes?type={type}`: List changes by rule type.
 - `GET /api/v1/changes?from={start}&to={end}`: List changes within a time range.
+
+The full API specification is available in [src/main/resources/openapi.yaml](src/main/resources/openapi.yaml).
 
 ## Running the application
 ```bash

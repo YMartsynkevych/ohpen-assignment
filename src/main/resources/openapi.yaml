@@ -1,0 +1,178 @@
+openapi: 3.0.3
+info:
+  title: Configuration Change Tracker API
+  version: 1.0.0
+  description: API for logging, storing, and retrieving changes to domain-specific rules.
+
+paths:
+  /api/v1/changes:
+    post:
+      summary: Record a new configuration change
+      operationId: createChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRequest'
+      responses:
+        '201':
+          description: Configuration change recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      summary: Retrieve change history with filters
+      operationId: getChanges
+      parameters:
+        - name: type
+          in: query
+          description: Filter by the type of rule
+          schema:
+            $ref: '#/components/schemas/RuleType'
+        - name: from
+          in: query
+          description: Start timestamp (ISO-8601)
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: End timestamp (ISO-8601)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of configuration changes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChangeResponse'
+
+  /api/v1/changes/{id}:
+    get:
+      summary: Retrieve a specific change by ID
+      operationId: getChangeById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Change found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeResponse'
+        '404':
+          description: Change not found
+
+components:
+  schemas:
+    RuleType:
+      type: string
+      enum: [CREDIT_LIMIT, APPROVAL_POLICY]
+
+    ChangeOperation:
+      type: string
+      enum: [ADD, UPDATE, DELETE]
+
+    ChangeRequest:
+      type: object
+      required: [type, operation, actor, payload]
+      properties:
+        type:
+          $ref: '#/components/schemas/RuleType'
+        operation:
+          $ref: '#/components/schemas/ChangeOperation'
+        actor:
+          type: string
+          example: "admin-user-01"
+        payload:
+          $ref: '#/components/schemas/RulePayload'
+
+    ChangeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/RuleType'
+        operation:
+          $ref: '#/components/schemas/ChangeOperation'
+        actor:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          $ref: '#/components/schemas/RulePayload'
+
+    RulePayload:
+      type: object
+      description: Polymorphic payload based on the rule type
+      discriminator:
+        propertyName: type
+        mapping:
+          CREDIT_LIMIT: '#/components/schemas/CreditLimitPayload'
+          APPROVAL_POLICY: '#/components/schemas/ApprovalPolicyPayload'
+      oneOf:
+        - $ref: '#/components/schemas/CreditLimitPayload'
+        - $ref: '#/components/schemas/ApprovalPolicyPayload'
+
+    CreditLimitPayload:
+      type: object
+      required: [type, amount, currency, customerId]
+      properties:
+        type:
+          type: string
+          enum: [CREDIT_LIMIT]
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          example: "EUR"
+        customerId:
+          type: string
+
+    ApprovalPolicyPayload:
+      type: object
+      required: [type, policyName, approvers, requiredSignatures]
+      properties:
+        type:
+          type: string
+          enum: [APPROVAL_POLICY]
+        policyName:
+          type: string
+        approvers:
+          type: array
+          items:
+            type: string
+        requiredSignatures:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              timestamp: { type: string, format: date-time }
+              status: { type: integer }
+              error: { type: string }
+              message: { type: string }
+              path: { type: string }
