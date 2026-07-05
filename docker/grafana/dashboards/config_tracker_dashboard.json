@@ -108,8 +108,8 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (operation, rule_type) (increase(config_tracker_changes_total[1m]))",
-          "legendFormat": "{{operation}} - {{rule_type}}",
+          "expr": "sum by (operation, rule_type, tenant_id) (increase(config_tracker_changes_total{tenant_id=~\"$tenant\"}[1m]))",
+          "legendFormat": "{{operation}} - {{rule_type}} ({{tenant_id}})",
           "range": true,
           "refId": "A"
         }
@@ -176,8 +176,8 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (operation) (config_tracker_changes_total)",
-          "legendFormat": "{{operation}}",
+          "expr": "sum by (operation, tenant_id) (config_tracker_changes_total{tenant_id=~\"$tenant\"})",
+          "legendFormat": "{{operation}} ({{tenant_id}})",
           "range": true,
           "refId": "A"
         }
@@ -240,7 +240,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(config_tracker_critical_changes_total)",
+          "expr": "sum(config_tracker_critical_changes_total{tenant_id=~\"$tenant\"})",
           "range": true,
           "refId": "A"
         }
@@ -253,7 +253,35 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "definition": "label_values(config_tracker_changes_total, tenant_id)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Tenant",
+        "multi": true,
+        "name": "tenant",
+        "options": [],
+        "query": {
+          "query": "label_values(config_tracker_changes_total, tenant_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
