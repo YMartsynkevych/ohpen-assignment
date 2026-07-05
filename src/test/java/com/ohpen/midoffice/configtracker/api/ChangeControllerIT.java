@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -170,8 +171,47 @@ class ChangeControllerIT {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.timestamp").exists());
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("type: must not be null")))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("actor: must not be blank")));
+    }
+
+    @Test
+    void shouldListChangesByFilters() throws Exception {
+        // Given
+        Rule payload1 = new Rule.CreditLimitRule(new BigDecimal("1000.00"), "USD", "CUST-A");
+        ChangeRequest request1 = new ChangeRequest(RuleType.CREDIT_LIMIT, ChangeOperation.ADD, "actor", payload1, null, null);
+        
+        Rule payload2 = new Rule.ApprovalPolicyRule("Policy-A", java.util.List.of("Approver"), 1);
+        ChangeRequest request2 = new ChangeRequest(RuleType.APPROVAL_POLICY, ChangeOperation.ADD, "actor", payload2, null, null);
+
+        mockMvc.perform(post("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request1)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request2)))
+                .andExpect(status().isOk());
+
+        // When & Then - Filter by Type
+        mockMvc.perform(get("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .param("type", "CREDIT_LIMIT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("CREDIT_LIMIT"));
+
+        // When & Then - Filter by Time Range
+        LocalDateTime now = LocalDateTime.now();
+        mockMvc.perform(get("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .param("from", now.minusMinutes(1).toString())
+                .param("to", now.plusMinutes(1).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
