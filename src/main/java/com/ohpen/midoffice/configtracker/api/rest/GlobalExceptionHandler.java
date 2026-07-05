@@ -2,6 +2,7 @@ package com.ohpen.midoffice.configtracker.api.rest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -65,6 +66,16 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<ErrorResponse> handleCallNotPermitted(CallNotPermittedException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                "SERVICE_UNAVAILABLE",
+                "System is temporarily overloaded or downstream service is down. Please try again later.",
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

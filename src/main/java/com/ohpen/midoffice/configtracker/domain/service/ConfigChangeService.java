@@ -31,6 +31,7 @@ public class ConfigChangeService {
     private final RuleStateRepository ruleStateRepository;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final ExternalNotificationService notificationService;
 
     @Transactional
     public ConfigChange processChangeRequest(ChangeRequest request) {
@@ -106,6 +107,7 @@ public class ConfigChangeService {
 
         // 3. Notify (only after successful commit)
         eventPublisher.publishEvent(change);
+        notificationService.notifyExternalSystem(change);
 
         return change;
     }

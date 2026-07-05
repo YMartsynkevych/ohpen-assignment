@@ -37,3 +37,18 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8080/realms/midoffice
+
+resilience4j:
+  retry:
+    instances:
+      externalService:
+        maxAttempts: 3
+        waitDuration: 100ms
+  circuitbreaker:
+    instances:
+      externalService:
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 5
+        slidingWindowSize: 10
+        waitDurationInOpenState: 5s
+        registerHealthIndicator: true
