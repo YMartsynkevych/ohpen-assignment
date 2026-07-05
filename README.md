@@ -4,6 +4,8 @@ A senior-architect designed service for tracking configuration changes across mu
 
 ## Features
 - **Java 21 & Spring Boot 3.x**: Leverages modern Java features like `sealed interfaces` and `records`.
+- **Multi-Tenancy**: Built-in data isolation using Hibernate filters and `ThreadLocal` context.
+- **Security**: OAuth2 Resource Server with JWT tenant extraction.
 - **Domain-Driven Design**: Focused on making illegal states unrepresentable.
 - **API-First**: Standard RESTful endpoints for CRUD-like change operations.
 - **In-Memory Persistence**: Uses H2 and JPA for history and current state tracking.

@@ -10,6 +10,7 @@ import com.ohpen.midoffice.configtracker.infrastructure.persistence.ConfigChange
 import com.ohpen.midoffice.configtracker.infrastructure.persistence.ConfigChangeRepository;
 import com.ohpen.midoffice.configtracker.infrastructure.persistence.RuleStateEntity;
 import com.ohpen.midoffice.configtracker.infrastructure.persistence.RuleStateRepository;
+import com.ohpen.midoffice.configtracker.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,19 +40,19 @@ public class ConfigChangeService {
             case ADD -> {
                 validateAdd(request);
                 yield new ConfigChange.AddedRule(
-                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), TenantContext.getTenantId(), request.type(), request.payload()
                 );
             }
             case UPDATE -> {
                 validateUpdate(request);
                 yield new ConfigChange.UpdatedRule(
-                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.oldPayload(), request.newPayload()
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), TenantContext.getTenantId(), request.type(), request.oldPayload(), request.newPayload()
                 );
             }
             case DELETE -> {
                 validateDelete(request);
                 yield new ConfigChange.RemovedRule(
-                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), request.type(), request.payload()
+                    UUID.randomUUID(), LocalDateTime.now(), request.actor(), TenantContext.getTenantId(), request.type(), request.payload()
                 );
             }
         };
@@ -124,6 +125,7 @@ public class ConfigChangeService {
             existingState.ifPresent(ruleStateRepository::delete);
         } else {
             RuleStateEntity state = existingState.orElse(new RuleStateEntity());
+            state.setTenantId(change.tenantId());
             state.setRuleType(change.ruleType());
             state.setRuleKey(key);
             try {

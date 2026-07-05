@@ -6,6 +6,7 @@ import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
+import com.ohpen.midoffice.configtracker.infrastructure.tenant.TenantContext;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,9 @@ import java.util.UUID;
 public class ConfigChangeEntity {
     @Id
     private UUID id;
+
+    @Column(name = "tenant_id")
+    private String tenantId;
 
     @Enumerated(EnumType.STRING)
     private RuleType ruleType;
@@ -41,6 +45,7 @@ public class ConfigChangeEntity {
         this.ruleType = change.ruleType();
         this.timestamp = change.timestamp();
         this.actor = change.actor();
+        this.tenantId = TenantContext.getTenantId();
         try {
             switch (change) {
                 case ConfigChange.AddedRule added -> {
@@ -66,16 +71,16 @@ public class ConfigChangeEntity {
         try {
             return switch (this.operation) {
                 case ADD -> new ConfigChange.AddedRule(
-                    id, timestamp, actor, ruleType,
+                    id, timestamp, actor, tenantId, ruleType,
                     objectMapper.readValue(payloadJson, Rule.class)
                 );
                 case UPDATE -> new ConfigChange.UpdatedRule(
-                    id, timestamp, actor, ruleType,
+                    id, timestamp, actor, tenantId, ruleType,
                     objectMapper.readValue(oldPayloadJson, Rule.class),
                     objectMapper.readValue(payloadJson, Rule.class)
                 );
                 case DELETE -> new ConfigChange.RemovedRule(
-                    id, timestamp, actor, ruleType,
+                    id, timestamp, actor, tenantId, ruleType,
                     objectMapper.readValue(payloadJson, Rule.class)
                 );
             };

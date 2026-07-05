@@ -9,6 +9,15 @@ paths:
     post:
       summary: Record a new configuration change
       operationId: createChange
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Tenant identifier (if not provided in JWT)
       requestBody:
         required: true
         content:
@@ -31,6 +40,12 @@ paths:
       summary: Retrieve change history with filters
       operationId: getChanges
       parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Tenant identifier
         - name: type
           in: query
           description: Filter by the type of rule
@@ -63,6 +78,12 @@ paths:
       summary: Retrieve a specific change by ID
       operationId: getChangeById
       parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Tenant identifier
         - name: id
           in: path
           required: true
@@ -199,3 +220,9 @@ components:
           schema:
             type: string
             example: "Cannot add rule: Rule already exists for key CUST-1"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

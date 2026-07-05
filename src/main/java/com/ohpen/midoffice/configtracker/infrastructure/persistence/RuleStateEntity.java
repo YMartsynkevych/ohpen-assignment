@@ -16,10 +16,13 @@ public class RuleStateEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "tenant_id")
+    private String tenantId;
+
     @Enumerated(EnumType.STRING)
     private RuleType ruleType;
 
-    private String ruleKey; // e.g. customerId for CREDIT_LIMIT, policyName for APPROVAL_POLICY
+    private String ruleKey;
 
     @Column(columnDefinition = "TEXT")
     private String payloadJson;

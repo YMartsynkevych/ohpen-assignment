@@ -21,12 +21,14 @@ class ConfigChangeTest {
             UUID.randomUUID(),
             LocalDateTime.now(),
             "admin",
+            "tenant-1",
             RuleType.CREDIT_LIMIT,
             payload
         );
 
         assertNotNull(change.id());
         assertEquals("admin", change.actor());
+        assertEquals("tenant-1", change.tenantId());
         assertEquals(RuleType.CREDIT_LIMIT, change.ruleType());
     }
 
@@ -39,11 +41,12 @@ class ConfigChangeTest {
             UUID.randomUUID(),
             LocalDateTime.now(),
             "admin",
+            "tenant-1",
             RuleType.CREDIT_LIMIT,
             oldRule,
             newRule
         );
-
+        assertEquals("tenant-1", change.tenantId());
         assertEquals(oldRule, change.oldRule());
         assertEquals(newRule, change.newRule());
     }

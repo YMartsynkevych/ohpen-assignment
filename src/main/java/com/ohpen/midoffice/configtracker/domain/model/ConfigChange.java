@@ -7,12 +7,14 @@ public sealed interface ConfigChange {
     UUID id();
     LocalDateTime timestamp();
     String actor();
+    String tenantId();
     RuleType ruleType();
 
     record AddedRule(
         UUID id,
         LocalDateTime timestamp,
         String actor,
+        String tenantId,
         RuleType ruleType,
         Rule newRule
     ) implements ConfigChange {}
@@ -21,6 +23,7 @@ public sealed interface ConfigChange {
         UUID id,
         LocalDateTime timestamp,
         String actor,
+        String tenantId,
         RuleType ruleType,
         Rule oldRule,
         Rule newRule
@@ -30,6 +33,7 @@ public sealed interface ConfigChange {
         UUID id,
         LocalDateTime timestamp,
         String actor,
+        String tenantId,
         RuleType ruleType,
         Rule removedRule
     ) implements ConfigChange {}
