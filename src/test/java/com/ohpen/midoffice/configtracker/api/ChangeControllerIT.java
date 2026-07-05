@@ -174,4 +174,38 @@ class ChangeControllerIT {
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
+    @Test
+    void shouldFailWhenUpdatingWithStaleState() throws Exception {
+        String customerId = "CUST-LOCK";
+        Rule initialRule = new Rule.CreditLimitRule(new BigDecimal("1000.00"), "USD", customerId);
+        
+        // 1. Initial ADD
+        ChangeRequest addRequest = new ChangeRequest(RuleType.CREDIT_LIMIT, ChangeOperation.ADD, "tester", initialRule, null, null);
+        mockMvc.perform(post("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(addRequest)))
+                .andExpect(status().isOk());
+
+        // 2. First update (Success)
+        Rule updatedRule1 = new Rule.CreditLimitRule(new BigDecimal("2000.00"), "USD", customerId);
+        ChangeRequest updateRequest1 = new ChangeRequest(RuleType.CREDIT_LIMIT, ChangeOperation.UPDATE, "tester", null, initialRule, updatedRule1);
+        mockMvc.perform(post("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateRequest1)))
+                .andExpect(status().isOk());
+
+        // 3. Second update using STALE initialRule as oldPayload (Failure)
+        Rule updatedRule2 = new Rule.CreditLimitRule(new BigDecimal("3000.00"), "USD", customerId);
+        ChangeRequest updateRequest2 = new ChangeRequest(RuleType.CREDIT_LIMIT, ChangeOperation.UPDATE, "tester", null, initialRule, updatedRule2);
+        mockMvc.perform(post("/api/v1/changes")
+                .header(HeaderTenantProvider.TENANT_HEADER, "tenant-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateRequest2)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("BUSINESS_CONFLICT"))
+                .andExpect(jsonPath("$.message").value("Update payload mismatch: Provided old state does not match current system state. This might be due to a concurrent update."));
+    }
+
 }

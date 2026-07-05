@@ -78,8 +78,7 @@ public class ConfigChangeService {
             String existingPayloadJson = existing.get().getPayloadJson();
             String oldPayloadJson = objectMapper.writeValueAsString(request.oldPayload());
             if (!existingPayloadJson.equals(oldPayloadJson)) {
-                 log.warn("Update payload mismatch for key {}. Existing: {}, Provided: {}", key, existingPayloadJson, oldPayloadJson);
-                 // In some strict systems we would throw here. 
+                 throw new IllegalStateException("Update payload mismatch: Provided old state does not match current system state. This might be due to a concurrent update.");
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

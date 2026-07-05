@@ -28,4 +28,7 @@ public class RuleStateEntity {
     private String payloadJson;
 
     private LocalDateTime lastModified;
+
+    @Version
+    private Long version;
 }
