@@ -34,7 +34,7 @@ public class ChangeController {
         return changeService.getChangeById(id)
             .map(this::mapToResponse)
             .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .orElseThrow(() -> new ResourceNotFoundException("Change not found with id: " + id));
     }
 
     @GetMapping
