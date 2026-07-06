@@ -102,7 +102,21 @@ The service exposes a rich set of metrics via the `/actuator/prometheus` endpoin
 
 ---
 
-## 5. Getting Started
+## 6. Running Grafana and Prometheus
+
+### Prerequisites
+- Docker
+- Docker Compose
+
+### Start the Stack
+
+Run the following command from the project root:
+
+```bash
+docker compose up -d
+```
+
+## 7. Getting Started
 
 ### Prerequisites
 - JDK 21
