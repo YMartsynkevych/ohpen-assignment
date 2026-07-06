@@ -14,4 +14,6 @@ public interface ConfigChangeRepository extends JpaRepository<ConfigChangeEntity
 
     @Query("SELECT c FROM ConfigChangeEntity c WHERE c.timestamp BETWEEN ?1 AND ?2 AND c.tenantId = ?#{T(com.ohpen.midoffice.configtracker.infrastructure.tenant.TenantContext).getTenantId()}")
     List<ConfigChangeEntity> findByTimestampBetween(LocalDateTime start, LocalDateTime end);
+
+    List<ConfigChangeEntity> findAllByTenantId(String tenantId);
 }

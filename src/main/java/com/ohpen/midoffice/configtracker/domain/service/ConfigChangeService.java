@@ -158,6 +158,10 @@ public class ConfigChangeService {
         return changeRepository.findByTimestampBetween(start, end).stream().map(this::toDomain).toList();
     }
 
+    public List<ConfigChange> getAllChanges() {
+        return changeRepository.findAllByTenantId(TenantContext.getTenantId()).stream().map(this::toDomain).toList();
+    }
+
     private ConfigChange toDomain(ConfigChangeEntity entity) {
         return entity.toDomain(objectMapper);
     }

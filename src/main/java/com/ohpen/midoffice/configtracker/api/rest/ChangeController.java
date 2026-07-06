@@ -49,7 +49,7 @@ public class ChangeController {
         if (from != null && to != null) {
             return changeService.getChangesByTimeRange(from, to).stream().map(this::mapToResponse).toList();
         }
-        return List.of();
+        return changeService.getAllChanges().stream().map(this::mapToResponse).toList();
     }
 
     private ChangeResponse mapToResponse(ConfigChange change) {
