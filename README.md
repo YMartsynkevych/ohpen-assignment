@@ -102,6 +102,28 @@ The service exposes a rich set of metrics via the `/actuator/prometheus` endpoin
 
 ---
 
+## 5. API Reference
+
+All API requests require the `X-Tenant-Id` header for multi-tenant isolation.
+
+### Config Changes API
+`BASE_URL: /api/v1/changes`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/` | Create a new configuration change (ADD, UPDATE, DELETE). |
+| **GET** | `/{id}` | Retrieve a specific change by its unique UUID. |
+| **GET** | `/?type={RULE_TYPE}` | List changes filtered by rule type (e.g., `CREDIT_LIMIT`). |
+| **GET** | `/?from={ISO_DATE}&to={ISO_DATE}` | List changes within a specific time range. |
+
+### Observability API
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/actuator/health` | Service health status. |
+| **GET** | `/actuator/prometheus` | Micrometer metrics for Prometheus scraping. |
+
+---
+
 ## 6. Running Grafana and Prometheus
 
 ### Prerequisites
