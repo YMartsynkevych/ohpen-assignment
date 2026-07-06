@@ -165,4 +165,11 @@ public class ConfigChangeService {
     private ConfigChange toDomain(ConfigChangeEntity entity) {
         return entity.toDomain(objectMapper);
     }
+
+    public List<RuleStateEntity> getRuleStatesByType(RuleType type) {
+        if (type == null) {
+            return ruleStateRepository.findAllByTenantId();
+        }
+        return ruleStateRepository.findByRuleType(type);
+    }
 }
