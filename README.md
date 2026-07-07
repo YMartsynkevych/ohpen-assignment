@@ -1,23 +1,57 @@
 # Config Tracker Service
 
-A high-performance, resilient, and multi-tenant microservice designed to track, audit, and manage configuration changes across complex enterprise environments.
+A high-performance, resilient, and multi-tenant microservice designed to **manage configuration rules** and **track the complete history of changes** across complex enterprise environments.
+
+---
+
+## 🚀 Quick Usage
+
+The Config Tracker Service can be accessed and managed through multiple interfaces:
+
+### 1. Front-end Application (`configtracker-fe`)
+For a graphical user interface to manage rules and view audit trails, use the companion front-end:
+- **Repository**: `https://github.com/ohpen/configtracker-fe`
+- **Access**: Usually available at `http://localhost:5174` after setup.
+
+### 2. API Tools (Postman / Insomnia / cURL)
+You can interact directly with the REST API using tools like Postman. 
+- **Important**: All requests **must** include the `X-Tenant-Id` header for isolation.
+
+**Example cURL (Create a Rule):**
+```bash
+curl -X POST http://localhost:8080/api/v1/changes \
+     -H "X-Tenant-Id: acme-corp" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "type": "CREDIT_LIMIT",
+           "operation": "ADD",
+           "actor": "admin-user",
+           "payload": {
+             "amount": 5000,
+             "currency": "USD",
+             "customerId": "CUST-99"
+           }
+         }'
+```
+
+---
 
 ## 1. Project Overview
 
 ### Purpose
-In large-scale distributed systems, tracking *who* changed *what* configuration and *when* is critical for stability, security, and compliance. The Config Tracker Service provides a centralized "source of truth" for configuration state changes, ensuring every modification is validated, audited, and propagated reliably.
+The Config Tracker Service serves as a centralized "source of truth" for configuration state. Its primary goal is to **manage business rules** (like Credit Limits or Approval Policies) while maintaining a **tamper-evident audit trail** of every single modification.
 
 ### Business Problem Solved
 - **Shadow IT & Hidden Changes**: Prevents undocumented configuration drifts that lead to "it worked yesterday" production outages.
-- **Compliance & Auditing**: Provides a tamper-evident audit trail (Immutable History) required for SOC2, GDPR, and financial regulations.
+- **Compliance & Auditing**: Provides a permanent history (Who, What, When) required for SOC2, GDPR, and financial regulations.
 - **Concurrency Conflicts**: Prevents "Lost Updates" where multiple administrators overwrite each other's changes.
 - **System Synchronization**: Notifies downstream systems of configuration changes in real-time.
 
 ### Key Capabilities
-- **Generic Rule Engine**: Supports multiple rule types (Credit Limits, Approval Policies, etc.) using a flexible JSON schema.
+- **Generic Rule Engine**: Supports multiple rule types using a flexible JSON schema.
 - **State Versioning**: Maintains both the current "Active" state and a full historical timeline of changes.
 - **Optimistic Concurrency**: Mandatory `oldPayload` verification for updates to ensure state consistency.
-- **Critical Change Monitoring**: Automated detection and alerting for high-risk modifications (e.g., lowering security thresholds).
+- **Critical Change Monitoring**: Automated detection and alerting for high-risk modifications.
 
 ### Architecture Overview
 The service follows a **Hexagonal (Ports & Adapters)** architecture pattern:
@@ -40,61 +74,53 @@ The service uses a **Discriminator-based Isolation** model (Shared Database, Sep
 
 - **Tenant Identification**: Every request must provide a tenant context via the `X-Tenant-Id` HTTP header.
 - **Context Management**: A `TenantInterceptor` extracts the ID and stores it in a `ThreadLocal` `TenantContext`.
-- **Security Boundary**: The tenant context is cleared after every request to prevent "context leaking" between execution threads.
+- **Security Boundary**: The tenant context is cleared after every request to prevent "context leaking".
 
 ### Data Isolation Guarantees
-- **Hibernate Filters**: All repository queries are automatically scoped using Spring Data JPA `@Query` annotations that inject the current `TenantContext.getTenantId()`.
-- **Primary Keys**: Resource keys (like `customerId` or `policyName`) only need to be unique *within* a tenant.
+- **Hibernate Filters**: All repository queries are automatically scoped using the current `TenantContext`.
+- **Primary Keys**: Resource keys (like `customerId`) only need to be unique *within* a tenant.
 - **Validation**: The service verifies that a rule exists *for the current tenant* before allowing an `UPDATE` or `DELETE`.
 
-### Usage Example
-```http
-POST /api/v1/changes
-X-Tenant-Id: acme-corp
-Content-Type: application/json
+---
 
-{
-  "type": "CREDIT_LIMIT",
-  "operation": "ADD",
-  "actor": "admin-user",
-  "payload": {
-    "amount": 5000,
-    "currency": "USD",
-    "customerId": "CUST-99"
-  }
-}
-```
+## 3. API Reference
 
-### Scaling & Considerations
-- **Scaling**: Since the service is stateless (relying on DB for state), it can scale horizontally (O(n)). 
-- **Database Partitioning**: For very large tenant counts, the `tenant_id` column is an ideal candidate for database partitioning/sharding.
-- **Limitations**: Currently, cross-tenant reporting is disabled by design to maintain zero-leakage guarantees.
+All API requests require the `X-Tenant-Id` header.
+
+### Config Changes API
+`BASE_URL: /api/v1/changes`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/` | **Create Change**: Apply an `ADD`, `UPDATE`, or `DELETE` operation to a rule. |
+| **GET** | `/{id}` | **Get Change**: Retrieve a specific audit record by its unique UUID. |
+| **GET** | `/?type={TYPE}` | **Filter by Type**: List all changes for a specific rule type (e.g., `CREDIT_LIMIT`). |
+| **GET** | `/?from={ISO}&to={ISO}` | **Filter by Time**: List all changes within a specific time range. |
+
+### Observability API
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/actuator/health` | Service health and readiness status. |
+| **GET** | `/actuator/prometheus` | Micrometer metrics for Prometheus scraping. |
 
 ---
 
-## 3. Operational Resiliency
+## 4. Operational Resiliency
 
 ### Circuit Breaker Pattern
-Integration with external notification systems is protected by **Resilience4j**. If a downstream system becomes slow or unavailable:
-- The circuit opens to prevent resource exhaustion (thread hanging).
-- The system provides graceful degradation via a `GlobalExceptionHandler` returning `503 Service Unavailable`.
-- **Configuration**:
-    - `failureRateThreshold`: 50%
-    - `waitDurationInOpenState`: 10s
-    - `slidingWindowSize`: 10 calls
+Integration with external notification systems is protected by **Resilience4j**. If a downstream system becomes slow or unavailable, the circuit opens to prevent resource exhaustion.
 
 ### Concurrency Protection
-The service implements a strict **Compare-and-Swap (CAS)** pattern for updates. Users must provide the `oldPayload`. If the system detects that the stored state has changed since the user fetched it, the update is rejected with a `409 Conflict`.
+The service implements a strict **Compare-and-Swap (CAS)** pattern for updates. Users must provide the `oldPayload`. If the stored state has changed, the update is rejected with a `409 Conflict`.
 
 ---
 
-## 4. Observability & Monitoring
+## 5. Observability & Monitoring
 
 ### Metrics (Micrometer/Prometheus)
-The service exposes a rich set of metrics via the `/actuator/prometheus` endpoint:
-- **`config_tracker_changes_total`**: Counter of all changes, tagged by `operation` and `rule_type`.
+The service exposes metrics via `/actuator/prometheus`:
+- **`config_tracker_changes_total`**: Counter of all changes by operation and rule type.
 - **`config_tracker_critical_changes_total`**: High-priority counter for sensitive modifications.
-- **Standard JVM/Spring Metrics**: Latency (Timer), HTTP throughput, and Heap usage.
 
 ### Health Checks
 - **Liveness**: `/actuator/health/liveness`
@@ -102,48 +128,24 @@ The service exposes a rich set of metrics via the `/actuator/prometheus` endpoin
 
 ---
 
-## 5. API Reference
-
-All API requests require the `X-Tenant-Id` header for multi-tenant isolation.
-
-### Config Changes API
-`BASE_URL: /api/v1/changes`
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| **POST** | `/` | Create a new configuration change (ADD, UPDATE, DELETE). |
-| **GET** | `/{id}` | Retrieve a specific change by its unique UUID. |
-| **GET** | `/?type={RULE_TYPE}` | List changes filtered by rule type (e.g., `CREDIT_LIMIT`). |
-| **GET** | `/?from={ISO_DATE}&to={ISO_DATE}` | List changes within a specific time range. |
-
-### Observability API
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| **GET** | `/actuator/health` | Service health status. |
-| **GET** | `/actuator/prometheus` | Micrometer metrics for Prometheus scraping. |
-
----
-
 ## 6. Running Grafana and Prometheus
 
 ### Prerequisites
-- Docker
-- Docker Compose
+- Docker & Docker Compose
 
 ### Start the Stack
-
 Run the following command from the project root:
-
 ```bash
 docker compose up -d
 ```
+
+---
 
 ## 7. Getting Started
 
 ### Prerequisites
 - JDK 21
 - Maven 3.9+
-- Docker (for Prometheus/Grafana stack)
 
 ### Quick Start
 1. Build the project:
@@ -153,10 +155,6 @@ docker compose up -d
 2. Run the application:
    ```bash
    ./mvnw spring-boot:run
-   ```
-3. Run with full observability stack:
-   ```bash
-   docker-compose up -d
    ```
 
 ### Running Tests
