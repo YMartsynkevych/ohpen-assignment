@@ -3,6 +3,7 @@ package com.ohpen.midoffice.configtracker.infrastructure.monitoring;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
 import com.ohpen.midoffice.configtracker.domain.model.RuleType;
+import com.ohpen.midoffice.configtracker.domain.service.ExternalAlertingService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,16 +30,19 @@ class MonitoringServiceTest {
     @Mock
     private Counter counter;
 
+    @Mock
+    private ExternalAlertingService alertingService;
+
     private MonitoringService monitoringService;
 
     @BeforeEach
     void setUp() {
-        monitoringService = new MonitoringService(meterRegistry);
+        monitoringService = new MonitoringService(meterRegistry, alertingService);
         when(meterRegistry.counter(anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(counter);
     }
 
     @Test
-    void shouldIncrementCountersForCriticalCreditLimit() {
+    void shouldIncrementCountersAndTriggerAlertForCriticalCreditLimit() {
         // Given
         Rule.CreditLimitRule rule = new Rule.CreditLimitRule(new BigDecimal("150000"), "USD", "CUST-1");
         ConfigChange change = new ConfigChange.AddedRule(UUID.randomUUID(), LocalDateTime.now(), "actor", "tenant", RuleType.CREDIT_LIMIT, rule);
@@ -50,6 +54,7 @@ class MonitoringServiceTest {
         verify(meterRegistry).counter("config_tracker_changes_total", "operation", "ADD", "rule_type", "CREDIT_LIMIT");
         verify(meterRegistry).counter("config_tracker_critical_changes_total", "operation", "ADD", "rule_type", "CREDIT_LIMIT");
         verify(counter, times(2)).increment();
+        verify(alertingService).sendCriticalAlert(change);
     }
 
     @Test
@@ -65,10 +70,11 @@ class MonitoringServiceTest {
         verify(meterRegistry).counter("config_tracker_changes_total", "operation", "ADD", "rule_type", "CREDIT_LIMIT");
         verify(meterRegistry, never()).counter(eq("config_tracker_critical_changes_total"), anyString(), anyString(), anyString(), anyString());
         verify(counter, times(1)).increment();
+        verify(alertingService, never()).sendCriticalAlert(any());
     }
 
     @Test
-    void shouldIncrementCriticalCounterOnDelete() {
+    void shouldIncrementCriticalCounterAndTriggerAlertOnDelete() {
         // Given
         Rule.CreditLimitRule rule = new Rule.CreditLimitRule(new BigDecimal("1000"), "USD", "CUST-1");
         ConfigChange change = new ConfigChange.RemovedRule(UUID.randomUUID(), LocalDateTime.now(), "actor", "tenant", RuleType.CREDIT_LIMIT, rule);
@@ -80,10 +86,11 @@ class MonitoringServiceTest {
         verify(meterRegistry).counter("config_tracker_changes_total", "operation", "DELETE", "rule_type", "CREDIT_LIMIT");
         verify(meterRegistry).counter("config_tracker_critical_changes_total", "operation", "DELETE", "rule_type", "CREDIT_LIMIT");
         verify(counter, times(2)).increment();
+        verify(alertingService).sendCriticalAlert(change);
     }
 
     @Test
-    void shouldIncrementCriticalCounterOnApproverCountChange() {
+    void shouldIncrementCriticalCounterAndTriggerAlertOnApproverCountChange() {
         // Given
         Rule.ApprovalPolicyRule oldRule = new Rule.ApprovalPolicyRule("Policy", List.of("A", "B"), 2);
         Rule.ApprovalPolicyRule newRule = new Rule.ApprovalPolicyRule("Policy", List.of("A", "B", "C"), 2);
@@ -96,5 +103,6 @@ class MonitoringServiceTest {
         verify(meterRegistry).counter("config_tracker_changes_total", "operation", "UPDATE", "rule_type", "APPROVAL_POLICY");
         verify(meterRegistry).counter("config_tracker_critical_changes_total", "operation", "UPDATE", "rule_type", "APPROVAL_POLICY");
         verify(counter, times(2)).increment();
+        verify(alertingService).sendCriticalAlert(change);
     }
 }

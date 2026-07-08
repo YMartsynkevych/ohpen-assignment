@@ -3,6 +3,7 @@ package com.ohpen.midoffice.configtracker.infrastructure.monitoring;
 import com.ohpen.midoffice.configtracker.domain.model.ChangeOperation;
 import com.ohpen.midoffice.configtracker.domain.model.ConfigChange;
 import com.ohpen.midoffice.configtracker.domain.model.Rule;
+import com.ohpen.midoffice.configtracker.domain.service.ExternalAlertingService;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,11 @@ public class MonitoringService {
     private static final BigDecimal CRITICAL_CREDIT_LIMIT = new BigDecimal("100000");
 
     private final MeterRegistry meterRegistry;
+    private final ExternalAlertingService alertingService;
 
-    public MonitoringService(MeterRegistry meterRegistry) {
+    public MonitoringService(MeterRegistry meterRegistry, ExternalAlertingService alertingService) {
         this.meterRegistry = meterRegistry;
+        this.alertingService = alertingService;
     }
     
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -34,7 +37,8 @@ public class MonitoringService {
             meterRegistry.counter("config_tracker_critical_changes_total",
                 "operation", op.name(),
                 "rule_type", change.ruleType().name()).increment();
-            log.warn("[CRITICAL CHANGE] Notification sent to external monitoring for: {}", change);
+            log.warn("[CRITICAL CHANGE] Triggering alerting flow for: {}", change);
+            alertingService.sendCriticalAlert(change);
         }
     }
 

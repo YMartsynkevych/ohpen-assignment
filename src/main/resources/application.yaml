@@ -44,6 +44,9 @@ resilience4j:
       externalService:
         maxAttempts: 3
         waitDuration: 100ms
+      alertingService:
+        maxAttempts: 2
+        waitDuration: 50ms
   circuitbreaker:
     instances:
       externalService:
@@ -51,4 +54,10 @@ resilience4j:
         minimumNumberOfCalls: 5
         slidingWindowSize: 10
         waitDurationInOpenState: 5s
+        registerHealthIndicator: true
+      alertingService:
+        failureRateThreshold: 30
+        minimumNumberOfCalls: 3
+        slidingWindowSize: 5
+        waitDurationInOpenState: 10s
         registerHealthIndicator: true
